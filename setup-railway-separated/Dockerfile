@@ -1,4 +1,6 @@
-FROM thspacecode/erpnext-docker:version-16-latest
+# Methodology fork 2026-10-17 (Work OS): pin the base to the exact running versions (frappe 16.30.0 / erpnext 16.31.1)
+# so a rebuild never upgrades the framework, and add Frappe HR (hrms v16.16.0, Aug 7 2026, frappe >=16.0 <17).
+FROM thspacecode/erpnext-docker:16-F30.0_E31.1
 
 USER root
 
@@ -28,8 +30,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /tmp/*
 
-# copy built_sites from sites
-RUN mkdir -p /home/frappe/frappe-bench/built_sites \
+# copy built_sites from sites (hrms is fetched+built in the SAME RUN step, in case sites/ is a VOLUME in the base image)
+RUN su frappe -c "cd /home/frappe/frappe-bench && bench get-app --branch v16.16.0 hrms https://github.com/frappe/hrms" \
+    && { grep -qx hrms /home/frappe/frappe-bench/sites/apps.txt || echo hrms >> /home/frappe/frappe-bench/sites/apps.txt; } \
+    && test -e /home/frappe/frappe-bench/sites/assets/hrms \
+    && mkdir -p /home/frappe/frappe-bench/built_sites \
     && cp -r /home/frappe/frappe-bench/sites/assets /home/frappe/frappe-bench/built_sites/assets \
     && cp /home/frappe/frappe-bench/sites/apps.json /home/frappe/frappe-bench/built_sites/apps.json \
     && cp /home/frappe/frappe-bench/sites/apps.txt /home/frappe/frappe-bench/built_sites/apps.txt \
